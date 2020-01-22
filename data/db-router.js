@@ -12,27 +12,33 @@ router.get('/', (req, res) => {
       res.status(200).json(dbs);
     })
     .catch(error => {
-
+      res.status(500).json({success: false, error: "The post information could not be retrieved." });
     });
   });
 
   router.get('/:id', (req, res) => {
-    db.findById(req.query)
+    db.findById(req.params.id)
     .then(dbs => {
-      res.status(200).json(dbs);
+      if(dbs.length > 0)
+        res.status(200).json(dbs);
+      else
+      res.status(404).json({success: false, message: "The post with the specified ID does not exist." })
     })
     .catch(error => {
-
+      res.status(500).json({success: false, error: "The post information could not be retrieved." });
     });
   });
 
   router.get('/:id/comments', (req, res) => {
     db.findCommentById(req.params.id)
     .then(dbs => {
-      res.status(200).json(dbs);
+      if(dbs.length > 0)
+        res.status(200).json(dbs);
+      else
+      res.status(404).json({success: false, message: "The post with the specified ID does not exist." })
     })
     .catch(error => {
-
+      res.status(500).json({success: false, error:  "The comments information could not be retrieved." });
     });
   });
 
@@ -70,57 +76,87 @@ router.post('/', (req, res) => {
         });
 
 router.post('/:id/comments', (req, res) => {
-    if("name" in changes && "bio" in changes) {
-        db.update(id, changes)
-        .then(updated => {
-            if(updated) {
-                db.findById(id)
-                            .then(user => {
-                                console.log("User Data: ", user);
-                                res.status(200).json({success: true, user})
-                            })
+  const changes = req.body;
+  const comment = req.body;
 
-                            .catch(err => {
-                                res.status(500).json({success: false, err})
-                            })
+    if("text" in changes ) {
+      db.findById(req.params.id)
+          .then(body => {
+            if(body.length > 0) {
+              db.insertComment(comment)              
+              .then(data => {
+                db.findCommentById(data.id)
+                  .then(comm => {
+                    res.status(201).json({success: true, comm});
+                  })
+                  .catch(err => {
+                    res.status(500).json({success: false, error: "There was an error while saving the comment to the database" });
+                  })
+                
+              })
+              .catch(err => {
+                res.status(500).json({success: false, error: "There was an error while saving the comment to the database" });
+              });
             }
-            else {
-                res.status(404).json({success:false, message: 'The user with the specified ID does not exist'});
-            }
-        })
-
-        .catch(err =>{
-            res.status(500).json({success:false, errorMessage: 'The user information could not be modified'});
-        })
-    }
-
-    else
-        res.status(400).json({success:false, errorMessage: 'Please provide name and/or bio for the user'});
+            else
+            res.status(404).json({success: true, message: "The post with the specified ID does not exist." });
+          })
+      .catch(err => {
+        res.status(500).json({success: false, error: "There was an error while saving the comment to the database" });
+        });
+      }
+      else  {
+        res.status(404).json({success: false, errorMessage: "Please provide text for the comment." });
+      }      
+    });
 
 //---------------------------------------------------------
 // PUT Requests
 //---------------------------------------------------------
 router.put('/:id', (req, res) => {
-    db.update(req.params.id, req.query)
+  const changes = req.body;
+  if("title" in changes && "contents" in changes ) {
+    db.update(req.params.id, req.body)
     .then(dbs => {
-      res.status(200).json(dbs);
+      console.log(dbs);
+      if(parseInt(dbs))
+      {
+        console.log('ID: ', req.params.id);
+        db.findById(req.params.id)
+          .then(data => {
+            console.log('Inside db.findById()')
+            console.log('data: ', data);
+            res.status(200).json(data);
+          })
+          .catch(err => {
+            res.status(500).json({success: false, error: "Internal server error fetching post after upate." });
+          }) 
+        }              
+      else
+        res.status(404).json({success: false, message: "The post with the specified ID does not exist." })
     })
     .catch(error => {
-
+      res.status(500).json({success: false, error: "The post information could not be modified." });
     });
+  }
+  else
+    res.status(400).json({success: false, errorMessage: "Please provide title and contents for the post." });
   });
 
 //---------------------------------------------------------
 // DELETE Requests
 //---------------------------------------------------------
 router.delete('/:id', (req, res) => {
-    db.remove(req.params.id)
-    .then(dbs => {
-      res.status(200).json(dbs);
-    })
-    .catch(error => {
-
-    });
+  db.remove(req.params.id)
+  .then(dbs => {
+    if(parseInt(dbs))       
+      res.status(200).json(dbs);    
+    else
+    res.status(404).json({success: false, message: "The post with the specified ID does not exist." })
+  })
+  .catch(error => {
+    res.status(500).json({success: false, error: "The post could not be removed" });
+  });
   });
 
 module.exports = router;
