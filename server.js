@@ -7,10 +7,8 @@ server.use(express.json());
 server.use('/api/posts', dbRouter);
 
 server.get('/', (req, res) => {
-  res.send(`
-    <h2>Lambda DB API</h>
-    <p>Welcome to the DB API</p>
-  `);
+  const introText = process.env.INTRO;
+  res.status(200).json({INTRO: introText});
 });
 
 module.exports = server;
